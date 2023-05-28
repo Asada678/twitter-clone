@@ -7,7 +7,7 @@ import NewTweetForm from "~/components/NewTweetForm";
 import { api } from "~/utils/api";
 
 const Home: NextPage = () => {
-  const hello = api.example.hello.useQuery({ text: "from tRPC" });
+  // const tweet = api.tweet.create.useQuery({ text: "from tRPC" });
 
   return (
     <>
