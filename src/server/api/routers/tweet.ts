@@ -15,13 +15,9 @@ export const tweetRouter = createTRPCRouter({
     )
     .query(async ({ input: { limit = 10, cursor }, ctx }) => {
       const currentUserId = ctx.session?.user.id;
-      console.log(
-        "--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------"
-      );
-      console.log("currentUserId:", currentUserId);
       const data = await ctx.prisma.tweet.findMany({
         take: limit + 1,
-        cursor: cursor ? cursor : undefined,
+        cursor: cursor ? { createdAt_id: cursor } : undefined,
         orderBy: [{ createdAt: "desc" }, { id: "desc" }],
         select: {
           id: true,
@@ -68,5 +64,22 @@ export const tweetRouter = createTRPCRouter({
       });
 
       return tweet;
+    }),
+  toggleLike: protectedProcedure
+    .input(z.object({ id: z.string() }))
+    .mutation(async ({ input: { id }, ctx }) => {
+      const data = { tweetId: id, userId: ctx.session.user.id };
+
+      const existingLike = await ctx.prisma.like.findUnique({
+        where: { userId_tweetId: data },
+      });
+
+      if (existingLike == null) {
+        await ctx.prisma.like.create({ data });
+        return { addedLike: true };
+      } else {
+        await ctx.prisma.like.delete({ where: { userId_tweetId: data } });
+        return { addedLike: false };
+      }
     }),
 });
