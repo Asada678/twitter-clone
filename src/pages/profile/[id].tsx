@@ -25,6 +25,24 @@ const ProfilePage: NextPage<InferGetStaticPropsType<typeof getStaticProps>> = ({
     { getNextPageParam: (lastPage) => lastPage.nextCursor }
   );
 
+  const trpcUtils = api.useContext();
+
+  const toggleFollow = api.profile.toggleFollow.useMutation({
+    onSuccess: ({ addedFollow }) => {
+      trpcUtils.profile.getById.setData({ id }, (oldData) => {
+        if (oldData == null) return;
+
+        const countModifier = addedFollow ? 1 : -1;
+
+        return {
+          ...oldData,
+          isFollowing: addedFollow,
+          followersCount: oldData.followersCount + countModifier,
+        };
+      });
+    },
+  });
+
   if (profile == null || profile.name == null) {
     return <ErrorPage statusCode={404} />;
   }
@@ -54,8 +72,9 @@ const ProfilePage: NextPage<InferGetStaticPropsType<typeof getStaticProps>> = ({
         </div>
         <FollowButton
           isFollowing={profile.isFollowing}
+          isLoading={toggleFollow.isLoading}
           userId={id}
-          onClick={() => null}
+          onClick={() => toggleFollow.mutate({ userId: id })}
         />
       </header>
       <main>
@@ -72,16 +91,22 @@ const ProfilePage: NextPage<InferGetStaticPropsType<typeof getStaticProps>> = ({
 };
 interface FollowButtonProps {
   isFollowing: boolean;
+  isLoading: boolean;
   userId: string;
   onClick: () => void;
 }
-function FollowButton({ isFollowing, onClick, userId }: FollowButtonProps) {
+function FollowButton({
+  isFollowing,
+  isLoading,
+  onClick,
+  userId,
+}: FollowButtonProps) {
   const session = useSession();
   if (session.status !== "authenticated" || session.data.user.id === userId) {
     return null;
   }
   return (
-    <Button onClick={onClick} small gray={isFollowing}>
+    <Button onClick={onClick} small gray={isFollowing} disabled={isLoading}>
       {isFollowing ? "Unfollow" : "Follow"}
     </Button>
   );
